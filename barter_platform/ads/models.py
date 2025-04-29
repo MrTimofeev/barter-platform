@@ -37,9 +37,10 @@ class Ad(models.Model):
 
     # Поля модели
     user = models.ForeignKey(
-        User,
+        'auth.User',
         on_delete=models.CASCADE,
-        verbose_name='Пользователь'
+        verbose_name='Пользователь',
+        related_name='ads'
     )
     title = models.CharField(
         max_length=200,
@@ -61,6 +62,7 @@ class Ad(models.Model):
     condition = models.CharField(
         max_length=50,
         choices=CONDITION_CHOICE,
+        default='new',
         verbose_name='Состояние товара'
     )
     created_at = models.DateTimeField(

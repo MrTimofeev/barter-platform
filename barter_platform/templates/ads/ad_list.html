@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="mb-4">Список объявлений</h1>
+
+<div class="row">
+    {% for ad in ads %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            {% if ad.image_url %}
+            <img src="{{ ad.image_url }}" class="card-img-top" alt="{{ ad.title }}" style="height: 200px; object-fit: cover;">
+            {% endif %}
+            <div class="card-body">
+                <h5 class="card-title">{{ ad.title }}</h5>
+                <p class="card-text">{{ ad.description|truncatechars:100 }}</p>
+                <span class="badge bg-secondary">{{ ad.get_category_display }}</span>
+                <span class="badge bg-info text-dark">{{ ad.get_condition_display }}</span>
+            </div>
+            <div class="card-footer">
+                <small class="text-muted">
+                    Опубликовано {{ ad.created_at|date:"d.m.Y" }} 
+                    пользователем {{ ad.user.username }}
+                </small>
+                <a href="#" class="btn btn-sm btn-primary float-end">Подробнее</a>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12">
+        <div class="alert alert-info">Объявления не найдены</div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
