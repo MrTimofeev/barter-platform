@@ -1,18 +1,57 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1 class="mb-4">Список объявлений</h1>
+<!-- Форма фильтрации -->
+<form method="get" class="mb-4">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <input type="text" name="q" class="form-control" 
+                   placeholder="Поиск..." 
+                   value="{{ search_query }}">
+        </div>
+        <div class="col-md-3">
+            <select name="category" class="form-select">
+                <option value="">Все категории</option>
+                {% for value, label in categories %}
+                <option value="{{ value }}" 
+                        {% if selected_category == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="condition" class="form-select">
+                <option value="">Все состояния</option>
+                {% for value, label in conditions %}
+                <option value="{{ value }}"
+                        {% if selected_condition == value %}selected{% endif %}>
+                    {{ label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+    <div class="row mt-2">
+        <div class="col">
+            <button type="submit" class="btn btn-primary">Применить</button>
+            <a href="{% url 'ad_list' %}" class="btn btn-secondary">Сбросить</a>
+        </div>
+    </div>
+</form>
 
+<!-- Отображение объявлений -->
 <div class="row">
     {% for ad in ads %}
     <div class="col-md-4 mb-4">
         <div class="card h-100">
             {% if ad.image_url %}
-            <img src="{{ ad.image_url }}" class="card-img-top" alt="{{ ad.title }}" style="height: 200px; object-fit: cover;">
+            <img src="{{ ad.image_url }}" class="card-img-top" alt="{{ ad.title }}"
+                 style="height: 200px; object-fit: cover;">
             {% endif %}
             <div class="card-body">
                 <h5 class="card-title">{{ ad.title }}</h5>
-                <p class="card-text">{{ ad.description|truncatechars:100 }}</p>
+                <p class="card-text">{{ ad.description }}</p>
                 <span class="badge bg-secondary">{{ ad.get_category_display }}</span>
                 <span class="badge bg-info text-dark">{{ ad.get_condition_display }}</span>
             </div>
@@ -21,13 +60,20 @@
                     Опубликовано {{ ad.created_at|date:"d.m.Y" }} 
                     пользователем {{ ad.user.username }}
                 </small>
-                <a href="#" class="btn btn-sm btn-primary float-end">Подробнее</a>
+                <a href="{% url 'ad_detail' ad.pk %}" class="btn btn-sm btn-primary float-end">Подробнее</a>
             </div>
         </div>
     </div>
     {% empty %}
     <div class="col-12">
-        <div class="alert alert-info">Объявления не найдены</div>
+        <div class="alert alert-warning">
+            Объявления не найдены. 
+            {% if search_query or selected_category or selected_condition %}
+                Попробуйте изменить параметры поиска.
+            {% else %}
+                Нет доступных объявлений.
+            {% endif %}
+        </div>
     </div>
     {% endfor %}
 </div>

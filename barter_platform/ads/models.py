@@ -1,6 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
-
+from django.urls import reverse
 
 class Ad(models.Model):
     """
@@ -73,6 +72,9 @@ class Ad(models.Model):
         auto_now=True,
         verbose_name='Дата обновления'
     )
+
+    def get_absolute_url(self):
+        return reverse('ad_detail', kwargs={'pk': self.pk})
 
     def __str__(self):
         return self.title

@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'received' %}active{% endif %}" 
+               href="?tab=received">
+               Входящие ({{ received_proposals.count }})
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if active_tab == 'sent' %}active{% endif %}" 
+               href="?tab=sent">
+               Исходящие ({{ sent_proposals.count }})
+            </a>
+        </li>
+    </ul>
+
+    {% if active_tab == 'received' %}
+        <div class="list-group">
+            {% for proposal in received_proposals %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5>
+                            <a href="{{ proposal.ad_sender.get_absolute_url }}">
+                                {{ proposal.ad_sender.title }}
+                            </a>
+                            → 
+                            <a href="{{ proposal.ad_receiver.get_absolute_url }}">
+                                {{ proposal.ad_receiver.title }}
+                            </a>
+                        </h5>
+                        <p>{{ proposal.comment }}</p>
+                        <small class="text-muted">
+                            От: {{ proposal.ad_sender.user.username }} | 
+                            {{ proposal.created_at|date:"d.m.Y H:i" }}
+                        </small>
+                    </div>
+                    <div>
+                        <span class="badge bg-{% if proposal.status == 'pending' %}warning
+                                          {% elif proposal.status == 'accepted' %}success
+                                          {% else %}danger{% endif %}">
+                            {{ proposal.get_status_display }}
+                        </span>
+                        <a href="{% url 'update_proposal' proposal.pk %}" 
+                           class="btn btn-sm btn-outline-primary ms-2">
+                           Изменить статус
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-info">Нет входящих предложений</div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="list-group">
+            {% for proposal in sent_proposals %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h5>
+                            <a href="{{ proposal.ad_sender.get_absolute_url }}">
+                                {{ proposal.ad_sender.title }}
+                            </a>
+                            → 
+                            <a href="{{ proposal.ad_receiver.get_absolute_url }}">
+                                {{ proposal.ad_receiver.title }}
+                            </a>
+                        </h5>
+                        <p>{{ proposal.comment }}</p>
+                        <small class="text-muted">
+                            Кому: {{ proposal.ad_receiver.user.username }} | 
+                            {{ proposal.created_at|date:"d.m.Y H:i" }}
+                        </small>
+                    </div>
+                    <span class="badge bg-{% if proposal.status == 'pending' %}warning
+                                        {% elif proposal.status == 'accepted' %}success
+                                        {% else %}danger{% endif %}">
+                        {{ proposal.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            {% empty %}
+            <div class="alert alert-info">Вы не отправляли предложений</div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

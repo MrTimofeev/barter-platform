@@ -1,5 +1,5 @@
 from django import forms
-from .models import Ad
+from .models import Ad, ExchangeProposal
 
 class AdForm(forms.ModelForm):
     class Meta:
@@ -38,3 +38,18 @@ class AdForm(forms.ModelForm):
             if not self.request or not self.request.user.is_authenticated:
                 raise forms.ValidationError("Вы должны быть авторизованы")
             return cleaned_data
+        
+class ExchangeProposalForm(forms.ModelForm):
+    class Meta:
+        model = ExchangeProposal
+        fields = ['comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 4,
+                'placeholder': 'Опишите ваше предложение обмена...'
+            })
+        }
+        labels = {
+            'comment': 'Ваше предложение'
+        }

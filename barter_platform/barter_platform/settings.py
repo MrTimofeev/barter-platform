@@ -38,7 +38,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'ads.apps.AdsConfig'
+    'ads.apps.AdsConfig',
+    'rest_framework'
+
 ]
 
 MIDDLEWARE = [
@@ -124,4 +126,4 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'\
 
 LOGIN_REDIRECT_URL = '/'  # Перенаправлять на главную после входа
-LOGOUT_REDIRECT_URL = '/'  # Перенаправлять на главную после выхода
+LOGOUT_REDIRECT_URL = '/accounts/login/'  # Перенаправлять на страницу авторизации
