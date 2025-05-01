@@ -63,8 +63,9 @@ class AdListView(ListView):
     def get_queryset(self):
         print("\n=== НАЧАЛО ФИЛЬТРАЦИИ ===")
 
-        queryset = super().get_queryset()
-        print(f"Всего объявлений до фильтрации: {queryset.count()}")
+        # Начинаем с фильтрации по is_active
+        queryset = super().get_queryset().filter(is_active=True)
+        print(f"Активных объявлений: {queryset.count()}")
 
         # Получаем параметры
         search = self.request.GET.get('q')
@@ -87,7 +88,7 @@ class AdListView(ListView):
             queryset = queryset.filter(condition=condition)
             print(f"Применено состояние: '{condition}'")
 
-        print(f"Всего объявлений после фильтрации: {queryset.count()}")
+        print(f"Итоговое количество объявлений: {queryset.count()}")
         print("Последний SQL запрос:",
               connection.queries[-1]['sql'] if connection.queries else "Нет запросов")
 
@@ -112,20 +113,27 @@ class ExchangeProposalCreateView(LoginRequiredMixin, CreateView):
     def dispatch(self, request, *args, **kwargs):
         self.ad_receiver = get_object_or_404(Ad, pk=kwargs['receiver_pk'])
         self.ad_sender = get_object_or_404(Ad, pk=kwargs['sender_pk'])
-        
+
         # Проверка 1: Предложение самому себе
         if self.ad_sender.user == self.ad_receiver.user:
-            messages.warning(request, "Нельзя предлагать обмен на свой же товар")
+            messages.warning(
+                request, "Нельзя предлагать обмен на свой же товар")
             return redirect(self.ad_receiver.get_absolute_url())
-        
+
         # Проверка 2: Дубликат предложения
         if ExchangeProposal.objects.filter(
             ad_sender=self.ad_sender,
             ad_receiver=self.ad_receiver
         ).exists():
-            messages.error(request, "Вы уже отправляли предложение для этого обмена")
+            messages.error(
+                request, "Вы уже отправляли предложение для этого обмена")
             return redirect(self.ad_receiver.get_absolute_url())
-        
+
+        if not self.ad_sender.is_active or not self.ad_receiver.is_active:
+            messages.error(
+                request, "Обмен невозможен: одно из объявлений неактивно")
+            return redirect(self.ad_receiver.get_absolute_url())
+
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -137,18 +145,45 @@ class ExchangeProposalCreateView(LoginRequiredMixin, CreateView):
     def get_success_url(self):
         return reverse('ad_detail', kwargs={'pk': self.ad_receiver.pk})
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['ad_sender'] = self.ad_sender
+        context['ad_receiver'] = self.ad_receiver
+        return context
+
 
 class ExchangeProposalUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = ExchangeProposal
-    fields = ['status']
-    template_name = 'ads/proposal_update.html'
+    form_class = ExchangeProposalForm
+    template_name = 'ads/update_proposal.html'
 
     def test_func(self):
+        print("Проверка прав:", self.get_object(
+        ).ad_receiver.user == self.request.user)
         return self.get_object().ad_receiver.user == self.request.user
 
+    def post(self, request, *args, **kwargs):
+        # Должно появиться в консоли сервера
+        print("POST запрос получен! Данные:", request.POST)
+
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
-        messages.success(
-            self.request, f"Статус предложения изменен на: {form.instance.get_status_display()}")
+        # Проверка получения данны
+        print("Форма валидна! Статус:", form.cleaned_data['status'])
+
+        if form.instance.status == 'accepted':
+            # Закрываем объявления
+            form.instance.ad_sender.is_active = False
+            form.instance.ad_receiver.is_active = False
+            form.instance.ad_sender.save()
+            form.instance.ad_receiver.save()
+
+            # Опционально: уведомление
+            messages.success(
+                self.request,
+                "Обмен подтверждён! Объявления закрыты."
+            )
         return super().form_valid(form)
 
     def get_success_url(self):
@@ -169,23 +204,6 @@ class MyProposalsView(LoginRequiredMixin, TemplateView):
             ).select_related('ad_sender'),
         })
         return context
-
-
-class UpdateProposalView(LoginRequiredMixin, UpdateView):
-    model = ExchangeProposal
-    fields = ['status']
-    template_name = 'ads/update_proposal.html'
-
-    def test_func(self):
-        return self.get_object().ad_receiver.user == self.request.user
-
-    def get_initial(self):
-        if 'status' in self.request.GET:
-            return {'status': self.request.GET['status']}
-        return super().get_initial()
-
-    def get_success_url(self):
-        return reverse('my_proposals')
 
 
 def ad_list(request):

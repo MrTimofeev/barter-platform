@@ -15,10 +15,11 @@ class AdAdmin(admin.ModelAdmin):
         fieldsets (tuple): Группировка полей при редактировании.
     """
     
-    list_display = ('id', 'title', 'user', 'category', 'condition', 'created_at')
-    list_filter = ('category', 'condition')
+    list_display = ('id', 'title', 'user', 'category', 'condition', 'is_active', 'created_at')
+    list_filter = ('category', 'condition', 'is_active')
     search_fields = ('title', 'description', 'user__username')
     prepopulated_fields = {}
+    list_editable = ('is_active', )
     readonly_fields = ('created_at', 'updated_at')
     
     fieldsets = (
@@ -26,7 +27,7 @@ class AdAdmin(admin.ModelAdmin):
             'fields': ('user', 'title', 'description')
         }),
         ('Детали', {
-            'fields': ('category', 'condition', 'image_url')
+            'fields': ('category', 'condition', 'is_active', 'image_url')
         }),
         ('Даты', {
             'fields': ('created_at', 'updated_at')

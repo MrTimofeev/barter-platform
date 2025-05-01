@@ -16,6 +16,7 @@ class Ad(models.Model):
         condition (CharField): Состояние товара.
         created_at (DateTimeField): Дата создания объявления (автоматически).
         updated_at (DateTimeField): Дата последнего обновления (автоматически).
+        is_active (BooleanField): Доступность товара (активный/не активный)
     """
 
     # Выбор категории
@@ -71,6 +72,10 @@ class Ad(models.Model):
     updated_at = models.DateTimeField(
         auto_now=True,
         verbose_name='Дата обновления'
+    )
+    is_active = models.BooleanField(
+        default=True, 
+        verbose_name="Активно"
     )
 
     def get_absolute_url(self):

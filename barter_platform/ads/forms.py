@@ -42,7 +42,7 @@ class AdForm(forms.ModelForm):
 class ExchangeProposalForm(forms.ModelForm):
     class Meta:
         model = ExchangeProposal
-        fields = ['comment']
+        fields = ['status']
         widgets = {
             'comment': forms.Textarea(attrs={
                 'class': 'form-control',
