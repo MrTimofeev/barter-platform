@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-info text-white">
+            <h4><i class="bi bi-arrow-left-right"></i> Детали предложения #{{ proposal.id }}</h4>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <h5>
+                                {% if proposal.ad_sender.user == request.user %}
+                                    Вы предлагаете:
+                                {% else %}
+                                    {{ proposal.ad_sender.user.username }} предлагает:
+                                {% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h4>{{ proposal.ad_sender.title }}</h4>
+                            <p class="text-muted">
+                                Категория: {{ proposal.ad_sender.get_category_display }}<br>
+                                Состояние: {{ proposal.ad_sender.get_condition_display }}
+                            </p>
+                            <p>{{ proposal.ad_sender.description }}</p>
+                            <a href="{{ proposal.ad_sender.get_absolute_url }}" class="btn btn-sm btn-outline-primary">
+                                Посмотреть объявление
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-header bg-light">
+                            <h5>
+                                {% if proposal.ad_receiver.user == request.user %}
+                                    Ваш товар:
+                                {% else %}
+                                    Товар {{ proposal.ad_receiver.user.username }}:
+                                {% endif %}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <h4>{{ proposal.ad_receiver.title }}</h4>
+                            <p class="text-muted">
+                                Категория: {{ proposal.ad_receiver.get_category_display }}<br>
+                                Состояние: {{ proposal.ad_receiver.get_condition_display }}
+                            </p>
+                            <p>{{ proposal.ad_receiver.description }}</p>
+                            <a href="{{ proposal.ad_receiver.get_absolute_url }}" class="btn btn-sm btn-outline-primary">
+                                Посмотреть объявление
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5>Комментарий к предложению</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ proposal.comment }}</p>
+                </div>
+            </div>
+            
+            {% if proposal.status == 'pending' and proposal.ad_receiver.user == request.user %}
+            <div class="card mt-4">
+                <div class="card-header bg-warning">
+                    <h5>Действия</h5>
+                </div>
+                <div class="card-body text-center">
+                    <form action="{% url 'proposal_accept' pk=proposal.pk %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="bi bi-check-circle"></i> Принять предложение
+                        </button>
+                    </form>
+                    <form action="{% url 'proposal_reject' pk=proposal.pk %}" method="post" class="d-inline ms-3">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger btn-lg">
+                            <i class="bi bi-x-circle"></i> Отклонить предложение
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

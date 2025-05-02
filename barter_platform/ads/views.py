@@ -5,9 +5,10 @@ from django.contrib import messages
 from django.urls import reverse, reverse_lazy
 from django.views.generic import CreateView, DetailView, UpdateView, DeleteView, ListView, TemplateView
 from .models import Ad, ExchangeProposal
-from .forms import AdForm, ExchangeProposalForm
+from .forms import AdForm, ProposalCreateForm, ProposalStatusForm
 from django.db.models import Q
 from django.db import connection
+from django.views import View
 
 
 class AdCreateView(LoginRequiredMixin, CreateView):
@@ -107,7 +108,7 @@ class AdListView(ListView):
 
 
 class ExchangeProposalCreateView(LoginRequiredMixin, CreateView):
-    form_class = ExchangeProposalForm
+    form_class = ProposalCreateForm
     template_name = 'ads/proposal_form.html'
 
     def dispatch(self, request, *args, **kwargs):
@@ -139,6 +140,7 @@ class ExchangeProposalCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.ad_sender = self.ad_sender
         form.instance.ad_receiver = self.ad_receiver
+        form.instance.status = 'pending'
         messages.success(self.request, "Предложение успешно отправлено!")
         return super().form_valid(form)
 
@@ -154,13 +156,12 @@ class ExchangeProposalCreateView(LoginRequiredMixin, CreateView):
 
 class ExchangeProposalUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = ExchangeProposal
-    form_class = ExchangeProposalForm
+    form_class = ProposalStatusForm
     template_name = 'ads/update_proposal.html'
 
     def test_func(self):
-        print("Проверка прав:", self.get_object(
-        ).ad_receiver.user == self.request.user)
-        return self.get_object().ad_receiver.user == self.request.user
+        proposal = self.get_object()
+        return proposal.ad_receiver.user == self.request.user and proposal.status == 'pending'
 
     def post(self, request, *args, **kwargs):
         # Должно появиться в консоли сервера
@@ -168,23 +169,32 @@ class ExchangeProposalUpdateView(LoginRequiredMixin, UserPassesTestMixin, Update
 
         return super().post(request, *args, **kwargs)
 
-    def form_valid(self, form):
-        # Проверка получения данны
-        print("Форма валидна! Статус:", form.cleaned_data['status'])
+    def accept(self, request, *args, **kwargs):
+        """Обработка принятия предложения"""
+        proposal = self.get_object()
+        if proposal.status != 'pending':
+            messages.error(request, "Предложение уже обработано")
+            return redirect('my_proposals')
+        proposal = self.get_object()
+        proposal.status = 'accepted'
+        proposal.save()
 
-        if form.instance.status == 'accepted':
-            # Закрываем объявления
-            form.instance.ad_sender.is_active = False
-            form.instance.ad_receiver.is_active = False
-            form.instance.ad_sender.save()
-            form.instance.ad_receiver.save()
+        proposal.ad_sender.is_active = False
+        proposal.ad_receiver.is_active = False
+        proposal.ad_sender.save()
+        proposal.ad_receiver.save()
 
-            # Опционально: уведомление
-            messages.success(
-                self.request,
-                "Обмен подтверждён! Объявления закрыты."
-            )
-        return super().form_valid(form)
+        messages.success(request, "Обмен подтверждён! Объявления скрыты.")
+        return redirect('my_proposals')
+
+    def reject(self, request, *args, **kwargs):
+        """Обработка отклонения предложения"""
+        proposal = self.get_object()
+        proposal.status = 'rejected'
+        proposal.save()
+
+        messages.warning(request, "Предложение отклонено.")
+        return redirect('my_proposals')
 
     def get_success_url(self):
         return reverse('my_proposals')
@@ -195,17 +205,74 @@ class MyProposalsView(LoginRequiredMixin, TemplateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({
-            'sent_proposals': ExchangeProposal.objects.filter(
-                ad_sender__user=self.request.user
-            ).select_related('ad_receiver'),
-            'received_proposals': ExchangeProposal.objects.filter(
-                ad_receiver__user=self.request.user
-            ).select_related('ad_sender'),
-        })
+        user = self.request.user
+        # Получаем активную вкладку
+        tab = self.request.GET.get('tab', 'received')
+
+        context['active_tab'] = tab
+        context['received_proposals'] = ExchangeProposal.objects.filter(
+            ad_receiver__user=user
+        ).select_related('ad_sender', 'ad_receiver')
+
+        context['sent_proposals'] = ExchangeProposal.objects.filter(
+            ad_sender__user=user
+        ).select_related('ad_receiver', 'ad_sender')
+
         return context
 
 
-def ad_list(request):
-    ads = Ad.objects.all().order_by('-created_at')
-    return render(request,  'ads/ad_list.html', {'ads': ads})
+class ProposalAcceptView(LoginRequiredMixin, View):
+    """Обработка принятия предложения обмена"""
+
+    def post(self, request, pk):
+        proposal = get_object_or_404(
+            ExchangeProposal,
+            pk=pk,
+            ad_receiver__user=request.user,  # Только получатель может принять
+            status='pending'  # Только ожидающие предложения
+        )
+
+        # Обновляем статус
+        proposal.status = 'accepted'
+        proposal.save()
+
+        # Делаем объявления неактивными
+        proposal.ad_sender.is_active = False
+        proposal.ad_receiver.is_active = False
+        proposal.ad_sender.save()
+        proposal.ad_receiver.save()
+
+        messages.success(
+            request, "Вы приняли предложение обмена! Объявления скрыты.")
+        return redirect('my_proposals')
+
+
+class ProposalRejectView(LoginRequiredMixin, View):
+    """Обработка отклонения предложения обмена"""
+
+    def post(self, request, pk):
+        proposal = get_object_or_404(
+            ExchangeProposal,
+            pk=pk,
+            ad_receiver__user=request.user,  # Только получатель может отклонить
+            status='pending'  # Только ожидающие предложения
+        )
+
+        # Обновляем статус
+        proposal.status = 'rejected'
+        proposal.save()
+
+        messages.warning(request, "Вы отклонили предложение обмена.")
+        return redirect('my_proposals')
+
+
+class ExchangeProposalDetailView(LoginRequiredMixin, DetailView):
+    model = ExchangeProposal
+    template_name = 'ads/proposal_detail.html'
+    context_object_name = 'proposal'
+
+    def get_queryset(self):
+        return ExchangeProposal.objects.filter(
+            Q(ad_sender__user=self.request.user) |
+            Q(ad_receiver__user=self.request.user)
+        )

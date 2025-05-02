@@ -32,7 +32,7 @@
                 </div>
             </div>
 
-            <form method="post">
+            <form method="post" action="{% url 'propose_exchange' sender_pk=ad_sender.pk receiver_pk=ad_receiver.pk %}">
                 {% csrf_token %}
                 {{ form.comment.label_tag }}
                 {{ form.comment }}

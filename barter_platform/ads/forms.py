@@ -1,6 +1,7 @@
 from django import forms
 from .models import Ad, ExchangeProposal
 
+
 class AdForm(forms.ModelForm):
     class Meta:
         model = Ad
@@ -22,7 +23,7 @@ class AdForm(forms.ModelForm):
             'category': forms.Select(attrs={'class': 'form-select'}),
             'condition': forms.Select(attrs={'class': 'form-select'}),
         }
-        
+
         labels = {
             'image_url': 'Ссылка на изображение',
             'category': 'Категория',
@@ -32,24 +33,31 @@ class AdForm(forms.ModelForm):
         def __init__(self, *args, **kwargs):
             self.request = kwargs.pop('request', None)
             super().__init__(*args, **kwargs)
-    
+
         def clean(self):
             cleaned_data = super().clean()
             if not self.request or not self.request.user.is_authenticated:
                 raise forms.ValidationError("Вы должны быть авторизованы")
             return cleaned_data
-        
-class ExchangeProposalForm(forms.ModelForm):
+
+
+class ProposalCreateForm(forms.ModelForm):
     class Meta:
         model = ExchangeProposal
-        fields = ['status']
+        fields = ['comment']
         widgets = {
             'comment': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 4,
-                'placeholder': 'Опишите ваше предложение обмена...'
+                'placeholder': 'Опишите ваше предложение...'
             })
         }
         labels = {
             'comment': 'Ваше предложение'
         }
+
+
+class ProposalStatusForm(forms.ModelForm):
+    class Meta:
+        model = ExchangeProposal
+        fields = []

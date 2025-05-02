@@ -11,5 +11,7 @@ urlpatterns = [
     path('propose/<int:sender_pk>/to/<int:receiver_pk>/', ExchangeProposalCreateView.as_view(), name='propose_exchange'),
     path('proposal/<int:pk>/update/', ExchangeProposalUpdateView.as_view(), name='update_proposal'),
     path('my-proposals/', MyProposalsView.as_view(), name='my_proposals'),
-
+    path('proposal/<int:pk>/accept/', ProposalAcceptView.as_view(), name='proposal_accept'),
+    path('proposal/<int:pk>/reject/', ProposalRejectView.as_view(), name='proposal_reject'),
+    path('proposal/<int:pk>/', ExchangeProposalDetailView.as_view(), name='proposal_detail'),
 ]
