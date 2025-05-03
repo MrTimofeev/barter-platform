@@ -15,6 +15,9 @@
             <div class="navbar-nav">
                 {% if user.is_authenticated %}
                 <a class="nav-link" href="{% url 'ad_create' %}">Создать объявление</a>
+                <a class="nav-link" href="{% url 'user_ads' %}">
+                    <i class="bi bi-collection"></i> Мои объявления
+                </a>
                 <a class="nav-link" href="{% url 'my_proposals' %}">Мои предложения</a>
                 <form action="{% url 'logout' %}" method="post" class="d-inline">
                     {% csrf_token %}

@@ -62,11 +62,12 @@ class AdListView(ListView):
     context_object_name = 'ads'
 
     def get_queryset(self):
-        print("\n=== НАЧАЛО ФИЛЬТРАЦИИ ===")
-
         # Начинаем с фильтрации по is_active
-        queryset = super().get_queryset().filter(is_active=True)
-        print(f"Активных объявлений: {queryset.count()}")
+        queryset = Ad.objects.filter(
+            is_active=True
+        ).exclude(
+            user=self.request.user  # Исключаем объявления текущего пользователя
+        ).order_by('-created_at')
 
         # Получаем параметры
         search = self.request.GET.get('q')
@@ -79,19 +80,12 @@ class AdListView(ListView):
                 Q(title__icontains=search) |
                 Q(description__icontains=search)
             )
-            print(f"Применён поиск: '{search}'")
 
         if category:
             queryset = queryset.filter(category=category)
-            print(f"Применена категория: '{category}'")
 
         if condition:
             queryset = queryset.filter(condition=condition)
-            print(f"Применено состояние: '{condition}'")
-
-        print(f"Итоговое количество объявлений: {queryset.count()}")
-        print("Последний SQL запрос:",
-              connection.queries[-1]['sql'] if connection.queries else "Нет запросов")
 
         return queryset.order_by('-created_at')
 
@@ -105,6 +99,19 @@ class AdListView(ListView):
             'conditions': Ad.CONDITION_CHOICE,
         })
         return context
+
+
+class UserAdsView(LoginRequiredMixin, ListView):
+    template_name = 'ads/user_ads.html'
+    context_object_name = 'ads'
+    paginate_by = 10  # Пагинация по 10 объявлений
+
+    def get_queryset(self):
+        # Только активные объявления текущего пользователя
+        return Ad.objects.filter(
+            user=self.request.user,
+            is_active=True
+        ).order_by('-created_at')
 
 
 class ExchangeProposalCreateView(LoginRequiredMixin, CreateView):
